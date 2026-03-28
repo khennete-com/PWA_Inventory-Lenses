@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+
+<title>Inventory System v3</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+
+<style>
+
+body{font-family:Arial;margin:0;background:#eef2f6}
+
+header{
+background:#1e3a8a;
+color:white;
+padding:16px;
+text-align:center;
+font-size:20px;
+}
+
+.nav{display:flex;background:white;border-bottom:1px solid #ddd}
+
+.nav button{
+flex:1;
+padding:12px;
+border:none;
+background:white;
+cursor:pointer;
+font-weight:bold;
+}
+
+.nav button:hover{background:#f1f5f9}
+
+.nav button.active{
+background:#1e3a8a;
+color:white;
+}
+
+.container{padding:12px}
+
+.panel{
+background:white;
+padding:12px;
+border-radius:6px;
+margin-bottom:12px;
+}
+
+.hidden{display:none}
+
+input,select{padding:6px;margin:4px}
+
+button.action{
+background:#2563eb;
+color:white;
+border:none;
+padding:6px 10px;
+border-radius:4px;
+cursor:pointer;
+}
+
+button.action:hover{background:#1d4ed8}
+
+table{
+width:100%;
+border-collapse:collapse;
+font-size:13px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+text-align:center;
+}
+
+th{background:#f1f5f9}
+
+.negative{background:#ffcdd2}
+
+.dropdown{
+position:absolute;
+background:white;
+border:1px solid #ccc;
+max-height:200px;
+overflow:auto;
+width:300px;
+}
+
+.dropdown div{
+padding:6px;
+cursor:pointer;
+}
+
+.dropdown div:hover{background:#e2e8f0}
+
+.actionCell{
+display:flex;
+justify-content:center;
+gap:6px;
+}
+
+.btnAdd{
+background:#16a34a;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.btnLess{
+background:#f59e0b;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.btnExact{
+background:#2563eb;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.btnAdd:hover{background:#15803d}
+.btnLess:hover{background:#d97706}
+.btnExact:hover{background:#1d4ed8}
+
+</style>
+
+</head>
+
+<body>
+
+<header>Inventory System v3</header>
+
+<div class="nav">
+
+<button onclick="openTab('up')" id="tab_up">Home</button>
+<button onclick="openTab('sold')" id="tab_sold">Sold</button>
+<button onclick="openTab('receiving')" id="tab_receiving">Receiving</button>
+<button onclick="openTab('actual')" id="tab_actual">Actual Count</button>
+<button onclick="openTab('sov')" id="tab_sov">SOV</button>
+<button onclick="openTab('system')" id="tab_system">System</button>
+
+</div>
+
+<div class="container">
+
+<div id="up" class="panel hidden">
+
+<h3>Inventory Summary</h3>
+
+<table>
+<tr>
+<th>Stock on Hand</th>
+<th>Sold Items</th>
+<th>Actual on Hand</th>
+<th>Variance</th>
+</tr>
+<tr>
+<td id="sumSOH">0</td>
+<td id="sumSold">0</td>
+<td id="sumActual">0</td>
+<td id="sumVariance">0</td>
+</tr>
+</table>
+
+<br>
+
+<h3>Import Master</h3>
+
+<input type="file" id="upFile" accept=".xls">
+
+<button class="action" onclick="upMaster()">Import</button>
+
+</div>
+
+<div id="sold" class="panel hidden">
+<h3>Add Sold</h3>
+
+<input id="soldSearch" placeholder="Barcode or Description" onkeyup="searchItem()">
+
+<div id="dropdown" class="dropdown hidden"></div>
+
+<input id="soldQty" type="number" placeholder="Qty" onkeydown="soldEnter(event)">
+
+<button class="action" onclick="addSold()">Add Sold</button>
+
+<br><br>
+
+<h4>Import Sold</h4>
+
+<input type="file" id="importSoldFile" accept="*/*">
+
+<button class="action" onclick="importSoldXLS()">Import</button>
+<button style="background:#dc2626;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer"
+onclick="clearSold()">Clear All Sold</button>
+
+</div>
+
+<div id="actual" class="panel hidden">
+
+<h3>Actual Count</h3>
+
+<select id="actualFilter">
+<option value="barcode">Barcode</option>
+<option value="description">Description</option>
+</select>
+
+<input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="renderMaster()">
+
+</div>
+
+<div id="receiving" class="panel hidden">
+
+<h3>Receiving</h3>
+
+<div id="receivingPanel">
+
+<select id="receivingType">
+<option value="in">Stock Transfer-In</option>
+<option value="out">Stock Transfer-Out</option>
+<option value="auto">Auto Issuance</option>
+</select>
+
+<br><br>
+
+<input type="file" id="receivingFile" accept=".xls,.xlsx">
+<button class="action" onclick="importReceiving()">Import</button>
+
+<br><br>
+
+<table>
+<thead>
+<tr>
+<th>Barcode</th>
+<th>SKU</th>
+<th>Quantity</th>
+<th>Date Posted</th>
+<th>Receipt No.</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody id="receivingTable"></tbody>
+</table>
+
+</div>
+</div>
+
+<!-- NEW SOV TAB -->
+
+<div id="sov" class="panel hidden">
+
+<h3>Summary of Variance</h3>
+
+<div class="panel">
+
+<input id="sovSearch" 
+placeholder="Search Barcode or Description"
+onkeyup="renderSOV()"
+style="width:100%;padding:8px">
+
+<br><br>
+
+<button class="action" onclick="downSOV()">Download Report to Excel</button>
+
+</div>
+
+<div class="panel">
+<table id="sovTable">
+
+<thead>
+<tr>
+<th>Barcode</th>
+<th>Description</th>
+<th>SOH</th>
+<th>Sold</th>
+<th>Receiving</th>
+<th>Theo SOH</th>
+<th>Actual</th>
+<th>Variance</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+</div>
+
+<div id="system" class="panel hidden">
+
+<h3>System</h3>
+
+<!-- Backup Section -->
+<div class="panel">
+<h4 onclick="toggleSection('backupSection')" style="cursor:pointer">
+🔒 Backup / Restore
+</h4>
+
+<div id="backupSection" class="hidden">
+
+<button class="action" onclick="backup()">Backup Data</button>
+
+<br><br>
+
+<input type="file" id="restoreFile" accept=".inventory">
+<button class="action" onclick="restore()">Restore Selected File</button>
+
+</div>
+</div>
+
+<!-- Clear Section -->
+<div class="panel">
+<h4 onclick="toggleSection('clearSection')" style="cursor:pointer">
+⚠️ Clear Data
+</h4>
+
+<div id="clearSection" class="hidden">
+
+<button style="background:#dc2626;color:white;padding:8px;border:none;border-radius:4px"
+onclick="clearAll()">Delete All Data</button>
+
+</div>
+</div>
+
+</div>
+
+<div id="masterContainer" class="panel">
+
+<h3>Master Inventory</h3>
+
+<div style="overflow-x:auto;">
+<table id="masterTable">
+
+<thead>
+<tr>
+<th>Barcode</th>
+<th>Description</th>
+<th>SOH</th>
+<th>Sold</th>
+<th>Receiving</th> <!-- ADD THIS -->
+<th>Theo SOH</th>
+<th>Actual</th>
+<th>Variance</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+</div>
+
+<div id="notFoundPanel" class="panel hidden">
+
+<h4 onclick="toggleSection('notFoundContent')" style="cursor:pointer">
+⚠️ Unmatched Imported Items (<span id="nfCount">0</span>)
+</h4>
+
+<div id="notFoundContent" class="hidden">
+
+<textarea id="notFoundBox" 
+style="width:100%;height:150px;font-size:12px"
+readonly></textarea>
+
+<br><br>
+
+<button class="action" onclick="clearNotFound()">Clear List</button>
+
+</div>
+
+</div>
+
+<div id="soldContainer" class="panel hidden">
+
+<h3>Sold Table</h3>
+
+<table id="soldTable">
+
+<thead>
+<tr>
+<th>Barcode</th>
+<th>Description</th>
+<th>Sold</th>
+<th>Date Sold</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+let master={}
+let masterList=[]
+let soldRecords=[]
+let selectedItem=null
+let notFoundList = []
+let receivingRecords = []
+
+function Data(){
+
+let r = localStorage.getItem("lens_receiving")
+if(r) receivingRecords = JSON.parse(r)
+
+let m = localStorage.getItem("lens_master")
+let s = localStorage.getItem("lens_sold")
+let nf = localStorage.getItem("lens_notfound")
+
+if(m) master = JSON.parse(m)
+if(s) soldRecords = JSON.parse(s)
+if(nf) notFoundList = JSON.parse(nf)
+
+masterList = Object.values(master)
+
+}
+
+function openTab(id){
+
+// hide all main panels
+["up","sold","receiving","actual","sov","system"].forEach(p=>{
+document.getElementById(p).classList.add("hidden")
+})
+
+// show selected panel
+document.getElementById(id).classList.remove("hidden")
+
+// reset nav
+document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"))
+document.getElementById("tab_"+id).classList.add("active")
+
+// 🔒 GLOBAL RESET (prevents leakage)
+document.getElementById("masterContainer").style.display="none"
+document.getElementById("soldContainer").style.display="none"
+document.getElementById("notFoundPanel").classList.add("hidden")
+
+// TAB LOGIC
+if(id==="up"){
+renderSummary()
+}
+
+else if(id==="sold"){
+document.getElementById("soldContainer").style.display="block"
+renderNotFound()
+document.getElementById("notFoundPanel").classList.remove("hidden")
+}
+
+else if(id==="receiving"){
+renderReceiving()
+}
+
+else if(id==="sov"){
+
+document.getElementById("masterContainer").style.display="none"
+document.getElementById("soldContainer").style.display="none"
+
+document.getElementById("sov").classList.remove("hidden")
+
+renderSOV()
+
+}
+
+else if(id==="actual"){
+document.getElementById("masterContainer").style.display="block"
+document.getElementById("actualFilter").value="description"
+renderMaster() // FORCE refresh
+}
+
+else if(id==="system"){
+
+document.getElementById("masterContainer").style.display="none"
+document.getElementById("soldContainer").style.display="none"
+document.getElementById("notFoundPanel").classList.add("hidden")
+
+// AUTO OPEN BACKUP SECTION
+document.getElementById("backupSection").classList.remove("hidden")
+
+}
+
+else{
+document.getElementById("masterContainer").style.display="block"
+}
+
+// always refresh
+renderMaster()
+renderSold()
+
+}
+
+function wildcardMatch(text,pattern){
+
+text=text.toLowerCase().trim()
+pattern=pattern.toLowerCase().trim()
+
+let parts=pattern.split('%')
+
+let pos=0
+
+for(let part of parts){
+
+if(part==="") continue
+
+let index=text.indexOf(part,pos)
+
+if(index===-1) return false
+
+pos=index+part.length
+
+}
+
+return true
+
+}
+
+function searchItem(){
+
+let q=document.getElementById("soldSearch").value.toLowerCase().trim()
+let box=document.getElementById("dropdown")
+
+box.innerHTML=""
+
+if(!q){
+box.classList.add("hidden")
+return
+}
+
+let results=masterList.filter(i=>{
+
+if(q.includes("%")){
+return wildcardMatch(i.description,q)
+}
+
+if(i.barcode.toLowerCase().includes(q)) return true
+
+return i.description.toLowerCase().includes(q)
+
+})
+
+results.slice(0,10).forEach(i=>{
+
+let div=document.createElement("div")
+
+div.innerText=i.barcode+" - "+i.description
+
+div.onclick=function(){
+
+selectedItem=i
+
+document.getElementById("soldSearch").value=i.description
+
+box.classList.add("hidden")
+
+let qty=document.getElementById("soldQty")
+
+/* Default qty = 1 */
+qty.value=1
+
+/* Focus and select for quick overwrite */
+qty.focus()
+qty.select()
+
+}
+
+box.appendChild(div)
+
+})
+
+box.classList.remove("hidden")
+
+}
+
+function soldEnter(e){
+
+if(e.key==="Enter"){
+addSold()
+}
+
+}
+
+function addSold(){
+
+if(!selectedItem) return
+
+let qtyInput=document.getElementById("soldQty")
+let qty=Number(qtyInput.value)
+
+if(!qty) return
+
+selectedItem.sold+=qty
+
+soldRecords.push({
+barcode:selectedItem.barcode,
+description:selectedItem.description,
+sold:qty,
+date:new Date().toISOString().slice(0,10)
+})
+
+saveData()
+
+renderMaster()
+renderSold()
+
+/* Focus search box and move cursor to end */
+let searchBox=document.getElementById("soldSearch")
+
+searchBox.focus()
+
+let len=searchBox.value.length
+searchBox.setSelectionRange(len, len)
+
+/* Reset qty only (no focus here) */
+qtyInput.value=""
+
+}
+
+function upMaster(){
+
+let file=document.getElementById("upFile").files[0]
+
+if(!file){
+alert("Please choose a file first")
+return
+}
+
+/* check if already has data */
+if(masterList.length>0){
+
+if(!confirm("A master inventory already exists.\n\nUping will overwrite existing data.\n\nContinue?")){
+return
+}
+
+}
+
+let reader=new FileReader()
+
+reader.on=function(e){
+
+master={}
+soldRecords=[]
+
+let data=new Uint8Array(e.target.result)
+
+let wb=XLSX.read(data,{type:"array"})
+let sheet=wb.Sheets[wb.SheetNames[0]]
+
+let rows = XLSX.utils.sheet_to_json(sheet, { raw: false })
+
+rows.forEach(r=>{
+
+let barcode=r["BARCODE"]
+let description=r["PRODUCT DESCRIPTION"]
+let soh=Number(r["SOH"])||0
+
+if(!barcode) return
+
+master[barcode]={barcode,description,soh,sold:0,actual:0}
+
+})
+
+masterList=Object.values(master)
+
+saveData()
+
+renderMaster()
+renderSummary()
+
+alert("Master inventory uped successfully")
+
+}
+
+reader.readAsArrayBuffer(file)
+
+}
+
+function addActual(barcode){
+
+let item=master[barcode]
+
+if(!confirm("Product: "+item.description+"\n\nAdd 1 to Actual Count?")) return
+
+item.actual++
+
+saveData()
+
+renderMaster()
+
+}
+
+function lessActual(barcode){
+
+let item=master[barcode]
+
+if(!confirm("Product: "+item.description+"\n\nDecrease Actual Count by 1?")) return
+
+item.actual--
+
+saveData()
+
+renderMaster()
+
+}
+
+function exactActual(barcode){
+
+let item=master[barcode]
+
+let receiving = getReceivingTotal(item.barcode)
+let theo = item.soh + receiving - item.sold
+
+if(!confirm("Product: "+item.description+"\n\nSet Actual = Theo SOH ("+theo+") ?")) return
+
+item.actual=theo
+
+saveData()
+
+renderMaster()
+
+}
+
+function renderMaster(){
+
+let filter=document.getElementById("actualFilter")?.value
+let search=document.getElementById("actualSearch")?.value.toLowerCase()||""
+
+let rows=[]
+
+for(let i of masterList){
+
+if(!document.getElementById("actual").classList.contains("hidden")){
+
+if(filter==="barcode" && !i.barcode.toLowerCase().includes(search)) continue
+
+if(filter==="description"){
+
+if(search.includes("%")){
+if(!wildcardMatch(i.description,search)) continue
+}else{
+if(!i.description.toLowerCase().includes(search)) continue
+}
+
+}
+
+}
+
+rows.push(i)
+
+}
+
+let html=""
+
+if(rows.length===0){
+
+html="<tr><td colspan='9'>No data</td></tr>"
+
+}else{
+
+rows.forEach(i=>{
+
+let receiving = getReceivingTotal(i.barcode)
+let theo = i.soh + receiving - i.sold
+let variance=i.actual-theo
+
+html+=`<tr class="${variance<0?'negative':''}">
+<td>${i.barcode}</td>
+<td>${i.description}</td>
+<td>${i.soh}</td>
+<td>${i.sold}</td>
+<td>${receiving}</td>
+<td>${theo}</td>
+<td>${i.actual}</td>
+<td>${variance}</td>
+<td class="actionCell">
+<button class="btnAdd" onclick="addActual('${i.barcode}')">➕</button>
+<button class="btnLess" onclick="lessActual('${i.barcode}')">➖</button>
+<button class="btnExact" onclick="exactActual('${i.barcode}')">✔</button>
+</td>
+</tr>`
+
+})
+
+}
+
+document.querySelector("#masterTable tbody").innerHTML=html
+
+}
+
+function renderSold(){
+
+let html=""
+
+soldRecords.forEach((r,index)=>{
+
+html+=`<tr>
+<td>${r.barcode}</td>
+<td>${r.description}</td>
+<td>${r.sold}</td>
+<td>${r.date}</td>
+<td>
+<button style="background:#dc2626;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer"
+onclick="deleteSold(${index})">Delete</button>
+</td>
+</tr>`
+
+})
+
+document.querySelector("#soldTable tbody").innerHTML=html
+
+}
+
+function renderSummary(){
+
+let totalSOH=0
+let totalSold=0
+let totalActual=0
+let totalReceiving=0
+
+masterList.forEach(i=>{
+totalSOH+=Number(i.soh)||0
+totalSold+=Number(i.sold)||0
+totalActual+=Number(i.actual)||0
+totalReceiving += getReceivingTotal(i.barcode)
+})
+
+let theo = totalSOH + totalReceiving - totalSold
+let variance = totalActual - theo
+
+document.getElementById("sumSOH").innerText=totalSOH
+document.getElementById("sumSold").innerText=totalSold
+document.getElementById("sumActual").innerText=totalActual
+document.getElementById("sumVariance").innerText=variance
+
+}
+
+function renderSOV(){
+  
+let search = document.getElementById("sovSearch")?.value.toLowerCase() || ""
+let rows=[]
+
+for(let i of masterList){
+
+// 🔍 FILTER (ADD THIS BLOCK ONLY)
+if(search){
+let matchBarcode = i.barcode.toLowerCase().includes(search)
+let matchDesc = i.description.toLowerCase().includes(search)
+
+if(!matchBarcode && !matchDesc) continue
+}
+
+let receiving = getReceivingTotal(i.barcode)
+let theo = i.soh + receiving - i.sold
+let variance=i.actual-theo
+
+if(variance!==0){
+
+rows.push({
+barcode:i.barcode,
+description:i.description,
+soh:i.soh,
+sold:i.sold,
+receiving: receiving, // ADD THIS
+theo:theo,
+actual:i.actual,
+variance:variance
+})
+
+}
+
+}
+
+let html=""
+
+if(rows.length===0){
+html="<tr><td colspan='8'>All items are balanced (no variance)</td></tr>"
+}else{
+
+rows.forEach(r=>{
+
+html+=`<tr class="${r.variance<0?'negative':''}">
+<td>${r.barcode}</td>
+<td>${r.description}</td>
+<td>${r.soh}</td>
+<td>${r.sold}</td>
+<td>${r.receiving}</td> <!-- ADD -->
+<td>${r.theo}</td>
+<td>${r.actual}</td>
+<td>${r.variance}</td>
+</tr>`
+
+})
+
+}
+
+document.querySelector("#sovTable tbody").innerHTML=html
+
+}
+
+function downSOV(){
+let search = document.getElementById("sovSearch")?.value.toLowerCase() || ""
+let rows=[]
+
+for(let i of masterList){
+
+// 🔍 FILTER (ADD THIS BLOCK ONLY)
+if(search){
+let matchBarcode = i.barcode.toLowerCase().includes(search)
+let matchDesc = i.description.toLowerCase().includes(search)
+
+if(!matchBarcode && !matchDesc) continue
+}
+
+let receiving = getReceivingTotal(i.barcode)
+let theo = i.soh + receiving - i.sold
+let variance=i.actual-theo
+
+if(variance!==0){
+
+rows.push({
+BARCODE:i.barcode,
+DESCRIPTION:i.description,
+SOH:i.soh,
+SOLD:i.sold,
+RECEIVING: receiving, // ADD
+THEO_SOH:theo,
+ACTUAL:i.actual,
+VARIANCE:variance
+})
+
+}
+
+}
+
+if(rows.length===0){
+alert("No variance to export")
+return
+}
+
+let ws=XLSX.utils.json_to_sheet(rows)
+
+let wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"SOV")
+
+let now=new Date()
+
+let y=now.getFullYear()
+let m=(now.getMonth()+1).toString().padStart(2,"0")
+let d=now.getDate().toString().padStart(2,"0")
+
+let h=now.getHours().toString().padStart(2,"0")
+let min=now.getMinutes().toString().padStart(2,"0")
+let s=now.getSeconds().toString().padStart(2,"0")
+
+let timestamp=`${y}${m}${d}_${h}${min}${s}`
+
+let fileName=`summary_of_variance_${timestamp}.xls`
+
+XLSX.writeFile(wb,fileName)
+
+}
+
+function backup(){
+
+let password = _x9()
+
+/* 🔒 STRICT VALIDATION */
+
+// 1. master must exist and not empty
+if(!master || Object.keys(master).length === 0){
+alert("Backup failed: Master data is empty or invalid.")
+return
+}
+
+// 2. validate each item
+for(let key in master){
+
+let item = master[key]
+
+if(!item.barcode || !item.description){
+alert("Backup failed: Invalid item structure detected.")
+return
+}
+
+if(isNaN(item.soh) || isNaN(item.sold) || isNaN(item.actual)){
+alert("Backup failed: Numeric fields corrupted.")
+return
+}
+
+}
+
+// 3. validate arrays
+if(!Array.isArray(soldRecords)){
+alert("Backup failed: Sold records corrupted.")
+return
+}
+
+if(!Array.isArray(receivingRecords)){
+alert("Backup failed: Receiving records corrupted.")
+return
+}
+
+if(!Array.isArray(notFoundList)){
+alert("Backup failed: NotFound list corrupted.")
+return
+}
+
+/* Prepare data */
+let data = {
+version: "v3",   // ✅ version control
+timestamp: new Date().toISOString(),
+master: master,
+soldRecords: soldRecords,
+receivingRecords: receivingRecords,
+notFoundList: notFoundList
+}
+
+/* Convert to JSON */
+let json = JSON.stringify(data)
+
+/* Encrypt */
+let encrypted = CryptoJS.AES.encrypt(json, password).toString()
+
+/* Create blob */
+let blob = new Blob([encrypted], {type:"application/octet-stream"})
+let url = URL.createObjectURL(blob)
+
+/* Filename */
+let now = new Date()
+
+let mm = (now.getMonth()+1).toString().padStart(2,"0")
+let dd = now.getDate().toString().padStart(2,"0")
+let yyyy = now.getFullYear()
+let timestamp = `${mm}${dd}${yyyy}`
+let fileName = `IS_${timestamp}.INVENTORY`
+
+/* Download */
+let a = document.createElement("a")
+a.href = url
+a.download = fileName
+a.style.display = "none"
+
+document.body.appendChild(a)
+a.click()
+document.body.removeChild(a)
+
+URL.revokeObjectURL(url)
+
+alert("Backup created successfully.")
+
+}
+
+function restore(){
+
+let input=document.getElementById("restoreFile")
+let file=input.files[0]
+
+if(!input.files.length){
+alert("Please choose a backup file first")
+return
+}
+
+if(!file.name.endsWith(".INVENTORY")){
+alert("Invalid file type. Please select a .inventory file.")
+return
+}
+
+let password = _x9()
+
+let reader=new FileReader()
+
+reader.onload=function(e){
+
+try{
+
+let encrypted = e.target.result
+
+/* Decrypt */
+let bytes = CryptoJS.AES.decrypt(encrypted, password)
+let decrypted = bytes.toString(CryptoJS.enc.Utf8)
+
+if(!decrypted){
+alert("Invalid password or corrupted file.")
+return
+}
+
+/* Parse JSON */
+let data = JSON.parse(decrypted)
+
+/* 🔒 STRICT VALIDATION */
+
+// 1. Version check
+if(data.version && data.version !== "v3"){
+alert("Unsupported backup version.")
+return
+}
+
+// 2. Required structure
+if(!data.master || !data.soldRecords){
+alert("Invalid backup structure.")
+return
+}
+
+// 3. Validate master object
+if(typeof data.master !== "object"){
+alert("Corrupted master data.")
+return
+}
+
+for(let key in data.master){
+
+let item = data.master[key]
+
+if(!item.barcode || !item.description){
+alert("Invalid item detected in backup.")
+return
+}
+
+if(isNaN(item.soh) || isNaN(item.sold) || isNaN(item.actual)){
+alert("Corrupted numeric values in backup.")
+return
+}
+
+}
+
+// 4. Validate arrays
+if(!Array.isArray(data.soldRecords)){
+alert("Sold records corrupted.")
+return
+}
+
+if(data.receivingRecords && !Array.isArray(data.receivingRecords)){
+alert("Receiving records corrupted.")
+return
+}
+
+if(data.notFoundList && !Array.isArray(data.notFoundList)){
+alert("NotFound list corrupted.")
+return
+}
+
+/* 🛑 PASS ALL CHECKS → SAFE TO RESTORE */
+
+master = data.master
+soldRecords = data.soldRecords
+receivingRecords = data.receivingRecords || []
+notFoundList = data.notFoundList || []
+
+masterList = Object.values(master)
+
+/* Save + Refresh */
+saveData()
+renderMaster()
+renderSold()
+renderReceiving()
+renderNotFound()
+
+alert("Backup restored successfully.")
+
+}catch(err){
+alert("Restore failed. Invalid file or password.")
+}
+
+}
+
+reader.readAsText(file)
+
+}
+
+function clearAll(){
+
+/* First confirmation */
+if(!confirm("WARNING: This will permanently delete ALL data.\n\nDo you want to continue?")) return
+
+/* Second layer: strict typed validation */
+let input = prompt("Type EXACTLY: DELETE ALL\n\nThis action cannot be undone.")
+
+if(input !== "DELETE ALL"){
+alert("Validation failed. Data was NOT deleted.")
+return
+}
+
+/* Final safety (optional but strong) */
+if(!confirm("FINAL CONFIRMATION:\n\nAre you absolutely sure?")) return
+
+/* Perform delete */
+master={}
+masterList=[]
+soldRecords=[]
+
+saveData()
+renderMaster()
+renderSold()
+
+alert("All data has been permanently deleted.")
+
+}
+
+function importSoldXLS(){
+
+let file=document.getElementById("importSoldFile").files[0]
+
+if(!file){
+alert("Please choose a file")
+return
+}
+
+let reader=new FileReader()
+
+reader.on=function(e){
+
+let data=new Uint8Array(e.target.result)
+let wb=XLSX.read(data,{type:"array"})
+let sheet=wb.Sheets[wb.SheetNames[0]]
+
+let rows = XLSX.utils.sheet_to_json(sheet, { raw: true })
+
+/*
+Expected columns:
+Date
+Product Description
+Quantity
+*/
+
+let notFound = []
+let importedCount=0
+
+function formatDate(val){
+
+    if(typeof val === "number"){
+        let utc_days = Math.floor(val - 25569)
+        let utc_value = utc_days * 86400
+        let date = new Date(utc_value * 1000)
+        return date.toISOString().slice(0,10)
+    }
+
+    if(typeof val === "string" && val.trim() !== ""){
+        let d = new Date(val)
+        if(!isNaN(d)) return d.toISOString().slice(0,10)
+    }
+
+    return new Date().toISOString().slice(0,10)
+}
+
+rows.forEach(r=>{
+
+function getVal(row, keys){
+    for(let k of keys){
+        if(row[k] !== undefined) return row[k]
+    }
+    return ""
+}
+
+let desc = getVal(r, [
+    "Product Description",
+    "PRODUCT DESCRIPTION",
+    "Description",
+    "Item"
+]).toString().trim()
+
+let qty = Number(getVal(r, [
+    "Quantity",
+    "QUANTITY",
+    "Qty"
+])) || 0
+
+let rawDate = getVal(r, ["Date","DATE"])
+let date = formatDate(rawDate)
+
+if(!desc || qty===0) return
+
+/* FIND MATCH IN MASTER */
+let item = masterList.find(i =>
+i.description.toLowerCase() === desc.toLowerCase()
+)
+
+/* fallback using trimmed comparison */
+if(!item){
+item = masterList.find(i =>
+i.description.trim().toLowerCase() === desc.trim().toLowerCase()
+)
+}
+
+if(!item){
+notFound.push({
+    description: desc,
+    qty: qty,
+    date: date
+})
+return
+}
+
+/* UPDATE SOLD */
+item.sold+=qty
+
+soldRecords.push({
+barcode:item.barcode,
+description:item.description,
+sold:qty,
+date:date
+})
+
+importedCount++
+
+})
+
+/* SAVE unmatched globally */
+if(notFound.length > 0){
+    notFoundList = notFoundList.concat(notFound)
+}
+
+localStorage.setItem("lens_notfound", JSON.stringify(notFoundList))
+
+renderNotFound()
+saveData()
+renderMaster()
+renderSold()
+
+let msg=`Imported: ${importedCount}`
+
+if(notFound.length>0){
+let preview = notFound.slice(0,10).map(i =>
+    `${i.date} | ${i.qty} | ${i.description}`
+).join("\n")
+
+msg += `\n\nNot found (${notFound.length}):\n` + preview
+}
+
+alert(msg)
+
+}
+
+reader.readAsArrayBuffer(file)
+
+}
+
+function toggleSection(id){
+
+let el=document.getElementById(id)
+
+if(el.classList.contains("hidden")){
+el.classList.remove("hidden")
+}else{
+el.classList.add("hidden")
+}
+
+}
+
+function deleteSold(index){
+
+let record = soldRecords[index]
+
+if(!record) return
+
+let confirmMsg = 
+`Delete this record?
+
+${record.description}
+Qty: ${record.sold}
+Date: ${record.date}`
+
+if(!confirm(confirmMsg)) return
+
+/* reverse the sold value */
+let item = master[record.barcode]
+
+if(item){
+item.sold -= Number(record.sold) || 0
+
+/* prevent negative sold */
+if(item.sold < 0) item.sold = 0
+}
+
+/* remove record */
+soldRecords.splice(index,1)
+
+saveData()
+renderMaster()
+renderSold()
+
+}
+
+function _d(x){return atob(x)}
+
+function _x9(){
+
+/* encoded fragments */
+const a=_d("SU5W")              // INV
+const b=_d("djNfc2VjdXJl")      // v3_secure
+const c=_d("S04yMDI2")          // KN2026
+const d=_d("YmFja3VwX2xvY2s=")  // backup_lock
+const e=_d("UEhfaW52ZW50b3J5")  // PH_inventory
+
+/* shuffled merge */
+let raw=[c,a,e,b,d].join("#")
+
+/* final key */
+return CryptoJS.SHA256(raw).toString()
+}
+
+function clearSold(){
+
+    if(soldRecords.length === 0){
+        alert("No sold records to clear.")
+        return
+    }
+
+    /* First confirmation */
+    if(!confirm("This will delete ALL sold records.\n\nContinue?")) return
+
+    /* Typed validation */
+    let input = prompt("Type EXACTLY: CLEAR SOLD")
+
+    if(input !== "CLEAR SOLD"){
+        alert("Validation failed. No data deleted.")
+        return
+    }
+
+    /* Reset sold values in master */
+    Object.values(master).forEach(item=>{
+        item.sold = 0
+    })
+
+    /* Clear records */
+    soldRecords = []
+
+    saveData()
+    renderMaster()
+    renderSold()
+    renderSummary()
+
+    alert("All sold records cleared successfully.")
+
+}
+
+function renderNotFound(){
+
+    let panel = document.getElementById("notFoundPanel")
+    let box = document.getElementById("notFoundBox")
+    let count = document.getElementById("nfCount")
+
+    if(notFoundList.length === 0){
+        panel.classList.add("hidden")
+        return
+    }
+
+    count.innerText = notFoundList.length
+
+    let lines = notFoundList.map(item => 
+    `${item.date} | Qty: ${item.qty} | ${item.description}`
+)
+
+box.value = lines.join("\n")
+
+}
+
+function clearNotFound(){
+
+    if(!confirm("Clear unmatched items list?")) return
+
+    notFoundList = []
+
+    localStorage.setItem("lens_notfound", JSON.stringify(notFoundList)) // 👈 ADD
+
+    renderNotFound()
+
+}
+
+
+function importReceiving(){
+
+let file = document.getElementById("receivingFile").files[0]
+
+if(!file){
+alert("Please choose a file")
+return
+}
+
+let type = document.getElementById("receivingType").value
+
+let reader = new FileReader()
+
+reader.onload = function(e){
+
+let data = new Uint8Array(e.target.result)
+let wb = XLSX.read(data,{type:"array"})
+let sheet = wb.Sheets[wb.SheetNames[0]]
+
+let rows = XLSX.utils.sheet_to_json(sheet,{raw:false})
+
+rows.forEach(r=>{
+
+let barcode = r["BARCODE"] || r["Barcode"] || ""
+let sku = r["SKU"] || r["Product Description"] || ""
+let qty = Number(r["QUANTITY"] || r["Qty"]) || 0
+let date = r["DATE POSTED"] || r["Date"] || new Date().toISOString().slice(0,10)
+let receipt = r["RECIEPT NO."] || r["Receipt No"] || ""
+
+if(!barcode || qty===0) return
+
+receivingRecords.push({
+barcode,
+sku,
+qty,
+date,
+receipt,
+type
+})
+
+})
+
+saveData()
+renderReceiving()
+
+alert("Imported successfully")
+
+}
+
+reader.readAsArrayBuffer(file)
+
+}
+
+function renderReceiving(){
+
+let html=""
+
+if(receivingRecords.length===0){
+html="<tr><td colspan='6'>No data</td></tr>"
+}else{
+
+receivingRecords.forEach(r=>{
+
+html+=`<tr>
+<td>${r.barcode}</td>
+<td>${r.sku}</td>
+<td>${r.qty}</td>
+<td>${r.date}</td>
+<td>${r.receipt}</td>
+<td>${formatType(r.type)}</td>
+</tr>`
+
+})
+
+}
+
+document.getElementById("receivingTable").innerHTML = html
+
+}
+
+
+function formatType(t){
+if(t==="in") return "Stock Transfer-In"
+if(t==="out") return "Stock Transfer-Out"
+if(t==="auto") return "Auto Issuance"
+return t
+}
+
+function getReceivingTotal(barcode){
+
+let total = 0
+
+let all = receivingRecords
+
+all.forEach(r=>{
+
+if(r.barcode !== barcode) return
+
+if(r.type === "in" || r.type === "auto"){
+total += r.qty
+}
+
+if(r.type === "out"){
+total -= r.qty
+}
+
+})
+
+return total
+}
+
+function saveData(){
+
+localStorage.setItem("lens_receiving", JSON.stringify(receivingRecords))
+localStorage.setItem("lens_master", JSON.stringify(master))
+localStorage.setItem("lens_sold", JSON.stringify(soldRecords))
+localStorage.setItem("lens_notfound", JSON.stringify(notFoundList))
+
+}
+
+Data()
+openTab('up')
+renderMaster()
+renderSold()
+renderNotFound()
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js")
+    .then(() => console.log("PWA ready"));
+}
+
+</script>
+
+</body>
+</html>
