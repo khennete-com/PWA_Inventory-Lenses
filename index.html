@@ -164,20 +164,16 @@ display:none;
 }
 
 #sovTable{
-table-layout: fixed;
-width: 100%;
+min-width:800px; /* forces scroll instead of compression */
 }
 
 #sovTable th,
 #sovTable td{
-overflow: hidden;
-text-overflow: ellipsis;
 white-space: nowrap;
 }
 
-#sovTable th:nth-child(2),
-#sovTable td:nth-child(2){
-max-width:150px;
+.panel div[style*="overflow-x"]{
+-webkit-overflow-scrolling: touch;
 }
 
 </style>
