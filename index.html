@@ -1679,7 +1679,7 @@ let qty = Number(input)
 item.actual += qty
 
 saveData()
-renderMaster()
+renderMaster(
 
 }
 let isCompact = false
@@ -1705,36 +1705,45 @@ let newWorker = null
 
 function checkUpdate(){
 
+let status = document.getElementById("updateStatus")
+status.innerText = "Checking for updates..."
+
 if(!('serviceWorker' in navigator)){
-alert("Service Worker not supported")
+status.innerText = "Service Worker not supported"
 return
 }
 
 navigator.serviceWorker.getRegistration().then(reg=>{
 
 if(!reg){
-alert("No service worker found")
+status.innerText = "No service worker found"
 return
 }
 
-/* check update */
-reg.update()
+/* FORCE CHECK */
+reg.update().then(()=>{
 
-/* listen for new worker */
+/* if already waiting → update exists */
+if(reg.waiting){
+newWorker = reg.waiting
+status.innerText = "Update ready. Click 'Update App'."
+return
+}
+
+/* listen for new install */
 reg.addEventListener("updatefound", ()=>{
 
 newWorker = reg.installing
-
-document.getElementById("updateStatus").innerText = "Downloading update..."
+status.innerText = "Downloading update..."
 
 newWorker.addEventListener("statechange", ()=>{
 
 if(newWorker.state === "installed"){
 
 if(navigator.serviceWorker.controller){
-document.getElementById("updateStatus").innerText = "Update ready. Click 'Update App'."
+status.innerText = "Update ready. Click 'Update App'."
 }else{
-document.getElementById("updateStatus").innerText = "App is up to date."
+status.innerText = "App is up to date."
 }
 
 }
@@ -1743,10 +1752,18 @@ document.getElementById("updateStatus").innerText = "App is up to date."
 
 })
 
+/* fallback: no update */
+setTimeout(()=>{
+if(!newWorker){
+status.innerText = "App is up to date."
+}
+},1500)
+
+})
+
 })
 
 }
-
 
 function applyUpdate(){
 
@@ -1755,11 +1772,13 @@ alert("No update available")
 return
 }
 
-/* tell SW to activate */
+/* activate new SW */
 newWorker.postMessage({ action: "skipWaiting" })
 
-/* reload app */
+/* wait then reload */
+setTimeout(()=>{
 window.location.reload()
+},500)
 
 }
 
