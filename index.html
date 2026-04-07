@@ -365,7 +365,11 @@ onclick="clearAll()">Delete All Data</button>
 </div>
 
 <div class="panel">
-<h4>🔄 App Update</h4>
+<h4 onclick="toggleSection('appUpdateSection')" style="cursor:pointer">
+🔄 App Update
+</h4>
+
+<div id="appUpdateSection" class="hidden">
 
 <button class="action" onclick="checkUpdate()">Check for Updates</button>
 
@@ -373,6 +377,7 @@ onclick="clearAll()">Delete All Data</button>
 
 <p id="updateStatus" style="font-size:12px;color:#555"></p>
 
+</div>
 </div>
 
 </div>
@@ -1405,6 +1410,27 @@ el.classList.remove("hidden")
 el.classList.add("hidden")
 }
 
+}function toggleSection(id){
+
+let sections = ["backupSection","clearSection","appUpdateSection"]
+
+let target = document.getElementById(id)
+
+/* if already open → just close it */
+if(!target.classList.contains("hidden")){
+target.classList.add("hidden")
+return
+}
+
+/* close all first */
+sections.forEach(sec=>{
+let el = document.getElementById(sec)
+if(el) el.classList.add("hidden")
+})
+
+/* open selected */
+target.classList.remove("hidden")
+
 }
 
 function deleteSold(index){
@@ -1658,31 +1684,33 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js")
     .then(() => console.log("PWA ready"));
 }
+
+let currentBarcode = null
+
 function enterCustomer(barcode){
 
 let item = master[barcode]
 
-let input = prompt(
-`Product: ${item.description}\n\nEnter Quantity to Add to Actual:`
-)
+currentBarcode = barcode
 
-if(input === null) return
+document.getElementById("custTitle").innerText =
+"Product:\n" + item.description
 
-/* STRICT: numbers only */
-if(!/^\d+$/.test(input)){
-alert("Invalid input. Numbers only.")
-return
-}
+let modal = document.getElementById("customerModal")
+modal.style.display = "flex"
 
-let qty = Number(input)
+let input = document.getElementById("custInput")
 
-/* ✅ ADD to current Actual */
-item.actual += qty
+input.value = ""
 
-saveData()
-renderMaster()
+/* 🔥 AUTO FOCUS + CURSOR READY */
+setTimeout(()=>{
+input.focus()
+input.click()
+},100)
 
 }
+
 let isCompact = false
 
 function toggleCompact(){
@@ -1816,7 +1844,70 @@ renderMaster()
 
 }
 
+function saveCustomer(){
+
+let input = document.getElementById("custInput").value
+
+if(!/^\d+$/.test(input)){
+alert("Numbers only")
+return
+}
+
+let qty = Number(input)
+
+let item = master[currentBarcode]
+
+item.actual += qty
+
+saveData()
+renderMaster()
+
+closeCustomerModal()
+
+}
+
+function closeCustomerModal(){
+document.getElementById("customerModal").style.display = "none"
+}
+
 </script>
+
+<div id="customerModal" style="
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.5);
+align-items:center;
+justify-content:center;
+z-index:999;
+display:none;
+">
+
+<div style="
+background:white;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:300px;
+text-align:center;
+">
+
+<h4 id="custTitle">Enter Quantity</h4>
+
+<input id="custInput"
+type="number"
+inputmode="numeric"
+pattern="[0-9]*"
+style="width:100%;padding:10px;font-size:18px;box-sizing:border-box;"
+placeholder="Enter number">
+
+<br><br>
+
+<button class="action" onclick="saveCustomer()">Save</button>
+<button onclick="closeCustomerModal()">Cancel</button>
+
+</div>
+</div>
 
 </body>
 </html>
