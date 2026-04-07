@@ -364,6 +364,17 @@ onclick="clearAll()">Delete All Data</button>
 </div>
 </div>
 
+<div class="panel">
+<h4>🔄 App Update</h4>
+
+<button class="action" onclick="checkUpdate()">Check for Updates</button>
+
+<button class="action" onclick="applyUpdate()">Update App</button>
+
+<p id="updateStatus" style="font-size:12px;color:#555"></p>
+
+</div>
+
 </div>
 
 <div id="masterContainer" class="panel">
@@ -1688,6 +1699,68 @@ btn.innerText = "🖥 Normal View"
 table.classList.remove("compact")
 btn.innerText = "📱 Compact View"
 }
+
+}
+
+let newWorker = null
+
+function checkUpdate(){
+
+if(!('serviceWorker' in navigator)){
+alert("Service Worker not supported")
+return
+}
+
+navigator.serviceWorker.getRegistration().then(reg=>{
+
+if(!reg){
+alert("No service worker found")
+return
+}
+
+/* check update */
+reg.update()
+
+/* listen for new worker */
+reg.addEventListener("updatefound", ()=>{
+
+newWorker = reg.installing
+
+document.getElementById("updateStatus").innerText = "Downloading update..."
+
+newWorker.addEventListener("statechange", ()=>{
+
+if(newWorker.state === "installed"){
+
+if(navigator.serviceWorker.controller){
+document.getElementById("updateStatus").innerText = "Update ready. Click 'Update App'."
+}else{
+document.getElementById("updateStatus").innerText = "App is up to date."
+}
+
+}
+
+})
+
+})
+
+})
+
+}
+
+
+function applyUpdate(){
+
+if(!newWorker){
+alert("No update available")
+return
+}
+
+/* tell SW to activate */
+newWorker.postMessage({ action: "skipWaiting" })
+
+/* reload app */
+window.location.reload()
 
 }
 
