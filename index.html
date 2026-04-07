@@ -1887,6 +1887,15 @@ function closeCustomerModal(){
 document.getElementById("customerModal").style.display = "none"
 }
 
+document.getElementById("custInput").addEventListener("keydown", function(e){
+
+if(e.key === "Enter" || e.keyCode === 13){
+e.preventDefault()
+saveCustomer()
+}
+
+})
+
 </script>
 
 <div id="customerModal" style="
