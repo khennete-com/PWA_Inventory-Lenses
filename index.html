@@ -830,10 +830,11 @@ html+=`<tr class="${variance<0?'negative':''}">
 <td>${i.actual}</td>
 <td>${variance}</td>
 <td class="actionCell">
+<button class="btnCustomer" onclick="enterCustomer('${i.barcode}')">👤</button>
 <button class="btnAdd" onclick="addActual('${i.barcode}')">➕</button>
 <button class="btnLess" onclick="lessActual('${i.barcode}')">➖</button>
 <button class="btnExact" onclick="exactActual('${i.barcode}')">✔</button>
-<button class="btnCustomer" onclick="enterCustomer('${i.barcode}')">👤</button>
+
 </td>
 </tr>`
 
