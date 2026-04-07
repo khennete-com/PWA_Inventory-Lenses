@@ -147,6 +147,22 @@ cursor:pointer;
 
 .btnCustomer:hover{background:#6d28d9}
 
+/* COMPACT MODE */
+.compact th:nth-child(1),
+.compact td:nth-child(1), /* Barcode */
+
+.compact th:nth-child(4),
+.compact td:nth-child(4), /* Sold */
+
+.compact th:nth-child(5),
+.compact td:nth-child(5), /* Receiving */
+
+.compact th:nth-child(8),
+.compact td:nth-child(8)  /* Variance */
+{
+display:none;
+}
+
 </style>
 
 </head>
@@ -230,6 +246,7 @@ onclick="clearSold()">Clear All Sold</button>
 </select>
 
 <input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="renderMaster()">
+<button class="action" onclick="toggleCompact()">📱 Toggle Compact View</button>
 
 </div>
 
@@ -1653,6 +1670,24 @@ saveData()
 renderMaster()
 
 alert("Added " + qty + " to Actual")
+
+}
+let isCompact = false
+
+function toggleCompact(){
+
+let table = document.getElementById("masterTable")
+let btn = event.target
+
+isCompact = !isCompact
+
+if(isCompact){
+table.classList.add("compact")
+btn.innerText = "🖥 Normal View"
+}else{
+table.classList.remove("compact")
+btn.innerText = "📱 Compact View"
+}
 
 }
 
