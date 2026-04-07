@@ -245,7 +245,7 @@ onclick="clearSold()">Clear All Sold</button>
 <option value="description">Description</option>
 </select>
 
-<input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="renderMaster()">
+<input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="debounceRender()">
 <button class="action" onclick="toggleCompact()">📱 Toggle Compact View</button>
 
 </div>
@@ -457,6 +457,7 @@ let soldRecords=[]
 let selectedItem=null
 let notFoundList = []
 let receivingRecords = []
+let receivingMap = buildReceivingMap()
 
 function Data(){
 
@@ -816,7 +817,7 @@ html="<tr><td colspan='9'>No data</td></tr>"
 
 rows.forEach(i=>{
 
-let receiving = getReceivingTotal(i.barcode)
+let receiving = receivingMap[i.barcode] || 0
 let theo = i.soh + receiving - i.sold
 let variance=i.actual-theo
 
@@ -1267,7 +1268,7 @@ return
 
 let reader=new FileReader()
 
-reader.on=function(e){
+reader.onload = function(e){
 
 let data=new Uint8Array(e.target.result)
 let wb=XLSX.read(data,{type:"array"})
@@ -1679,7 +1680,7 @@ let qty = Number(input)
 item.actual += qty
 
 saveData()
-renderMaster(
+renderMaster()
 
 }
 let isCompact = false
@@ -1779,6 +1780,39 @@ newWorker.postMessage({ action: "skipWaiting" })
 setTimeout(()=>{
 window.location.reload()
 },500)
+
+}
+
+function buildReceivingMap(){
+
+let map = {}
+
+receivingRecords.forEach(r=>{
+
+if(!map[r.barcode]) map[r.barcode] = 0
+
+if(r.type === "in" || r.type === "auto"){
+map[r.barcode] += r.qty
+}
+
+if(r.type === "out"){
+map[r.barcode] -= r.qty
+}
+
+})
+
+return map
+}
+
+let renderTimer = null
+
+function debounceRender(){
+
+clearTimeout(renderTimer)
+
+renderTimer = setTimeout(()=>{
+renderMaster()
+}, 300)
 
 }
 
