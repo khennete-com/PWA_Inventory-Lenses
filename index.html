@@ -136,6 +136,17 @@ cursor:pointer;
 .btnLess:hover{background:#d97706}
 .btnExact:hover{background:#1d4ed8}
 
+.btnCustomer{
+background:#7c3aed;
+color:white;
+border:none;
+padding:8px 12px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.btnCustomer:hover{background:#6d28d9}
+
 </style>
 
 </head>
@@ -180,7 +191,7 @@ cursor:pointer;
 
 <h3>Import Master</h3>
 
-<input type="file" id="upFile" accept=".xls">
+<input type="file" id="upFile" accept=".xls,.xlsx">
 
 <button class="action" onclick="upMaster()">Import</button>
 
@@ -654,7 +665,7 @@ return
 
 let reader=new FileReader()
 
-reader.on=function(e){
+reader.onload = function(e){
 
 master={}
 soldRecords=[]
@@ -794,6 +805,7 @@ html+=`<tr class="${variance<0?'negative':''}">
 <button class="btnAdd" onclick="addActual('${i.barcode}')">➕</button>
 <button class="btnLess" onclick="lessActual('${i.barcode}')">➖</button>
 <button class="btnExact" onclick="exactActual('${i.barcode}')">✔</button>
+<button class="btnCustomer" onclick="enterCustomer('${i.barcode}')">👤</button>
 </td>
 </tr>`
 
@@ -1615,6 +1627,33 @@ renderNotFound()
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js")
     .then(() => console.log("PWA ready"));
+}
+function enterCustomer(barcode){
+
+let item = master[barcode]
+
+let input = prompt(
+`Product: ${item.description}\n\nEnter Quantity to Add to Actual:`
+)
+
+if(input === null) return
+
+/* STRICT: numbers only */
+if(!/^\d+$/.test(input)){
+alert("Invalid input. Numbers only.")
+return
+}
+
+let qty = Number(input)
+
+/* ✅ ADD to current Actual */
+item.actual += qty
+
+saveData()
+renderMaster()
+
+alert("Added " + qty + " to Actual")
+
 }
 
 </script>
