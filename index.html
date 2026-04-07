@@ -163,6 +163,23 @@ cursor:pointer;
 display:none;
 }
 
+#sovTable{
+table-layout: fixed;
+width: 100%;
+}
+
+#sovTable th,
+#sovTable td{
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+
+#sovTable th:nth-child(2),
+#sovTable td:nth-child(2){
+max-width:150px;
+}
+
 </style>
 
 </head>
