@@ -260,7 +260,9 @@ onclick="clearSold()">Clear All Sold</button>
 
 <input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="debounceRender()">
 <button class="action" onclick="toggleCompact()">📱 Toggle Compact View</button>
-
+<button class="action" onclick="downloadManualInventory()">
+⬇ Download Manual Inventory
+</button>
 </div>
 
 <div id="receiving" class="panel hidden">
@@ -1895,6 +1897,52 @@ saveCustomer()
 }
 
 })
+
+function downloadManualInventory(){
+
+let rows = []
+
+masterList.forEach(i=>{
+
+let receiving = getReceivingTotal(i.barcode)
+let theo = i.soh + receiving - i.sold
+
+rows.push({
+BARCODE: i.barcode,
+DESCRIPTION: i.description,
+THEO_SOH: theo
+})
+
+})
+
+if(rows.length === 0){
+alert("No data to export")
+return
+}
+
+/* create sheet */
+let ws = XLSX.utils.json_to_sheet(rows)
+
+/* create workbook */
+let wb = XLSX.utils.book_new()
+XLSX.utils.book_append_sheet(wb, ws, "Manual Inventory")
+
+/* timestamp filename */
+let now = new Date()
+
+let y = now.getFullYear()
+let m = (now.getMonth()+1).toString().padStart(2,"0")
+let d = now.getDate().toString().padStart(2,"0")
+
+let h = now.getHours().toString().padStart(2,"0")
+let min = now.getMinutes().toString().padStart(2,"0")
+
+let filename = `manual_inventory_${y}${m}${d}_${h}${min}.xls`
+
+/* download */
+XLSX.writeFile(wb, filename)
+
+}
 
 </script>
 
