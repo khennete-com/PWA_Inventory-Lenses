@@ -992,10 +992,13 @@ html+=`<tr class="${variance<0?'negative':''}">
 <td>${i.sold}</td>
 <td>${receiving}</td>
 <td>${theo}</td>
-<td>${i.actual}</td>
+<td>
+<input type="number" value="${i.actual}" 
+style="width:60px"
+onchange="updateActual('${i.barcode}', this.value)">
+</td>
 <td>${variance}</td>
 <td class="actionCell">
-<button class="btnCustomer" onclick="enterCustomer('${i.barcode}')">👤</button>
 <button class="btnAdd" onclick="addActual('${i.barcode}')">➕</button>
 <button class="btnLess" onclick="lessActual('${i.barcode}')">➖</button>
 <button class="btnExact" onclick="exactActual('${i.barcode}')">✔</button>
@@ -2003,40 +2006,8 @@ renderMaster()
 
 }
 
-function saveCustomer(){
 
-let input = document.getElementById("custInput").value
 
-if(!/^\d+$/.test(input)){
-alert("Numbers only")
-return
-}
-
-let qty = Number(input)
-
-let item = master[currentBarcode]
-
-item.actual += qty
-
-saveData()
-renderMaster()
-
-closeCustomerModal()
-
-}
-
-function closeCustomerModal(){
-document.getElementById("customerModal").style.display = "none"
-}
-
-document.getElementById("custInput").addEventListener("keydown", function(e){
-
-if(e.key === "Enter" || e.keyCode === 13){
-e.preventDefault()
-saveCustomer()
-}
-
-})
 
 function downloadManualInventory(){
 
@@ -2052,7 +2023,7 @@ BARCODE: i.barcode,
 DESCRIPTION: i.description,
 SOH: i.soh,
 SOLD: i.sold,
-RECEIVING: receiving,
+TRANS: receiving,
 THEO_SOH: theo
 })
 
@@ -2086,50 +2057,26 @@ let filename = `manual_inventory_${y}${m}${d}_${h}${min}.xls`
 XLSX.writeFile(wb, filename)
 
 }
+
+function updateActual(barcode, value){
+
+let item = master[barcode]
+
+let val = Number(value)
+
+if(isNaN(val)){
+alert("Invalid number")
+return
+}
+
+item.actual = val
+
+saveData()
+renderMaster()
+
+}
+
+
 </script>
-
-<div id="customerModal" style="
-position:fixed;
-top:0;left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.5);
-display:flex;
-align-items:flex-end; /* 👈 key fix */
-justify-content:center;
-z-index:999;
-padding:10px;
-box-sizing:border-box;
-display:none;
-">
-
-<div style="
-background:white;
-padding:16px;
-border-radius:12px;
-width:100%;
-max-width:400px;
-text-align:center;
-max-height:80vh;           /* 👈 prevents overflow */
-overflow:auto;             /* 👈 scroll if needed */
-">
-
-<h4 id="custTitle">Enter Quantity</h4>
-
-<input id="custInput"
-type="number"
-inputmode="numeric"
-pattern="[0-9]*"
-style="width:100%;padding:10px;font-size:18px;box-sizing:border-box;"
-placeholder="Enter number">
-
-<br><br>
-
-<button class="action" onclick="saveCustomer()">Save</button>
-<button onclick="closeCustomerModal()">Cancel</button>
-
-</div>
-</div>
-
 </body>
 </html>
