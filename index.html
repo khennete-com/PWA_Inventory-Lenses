@@ -181,9 +181,10 @@ display:flex;
 align-items:center;
 justify-content:space-between;
 background:#f8fafc;
-padding:10px 20px;
+padding:10px 12px;
 border-bottom:1px solid #ddd;
 font-size:14px;
+flex-wrap:wrap; /* 👈 IMPORTANT */
 }
 
 /* LEFT */
@@ -196,8 +197,12 @@ color:#1e3a8a;
 /* CENTER (tabs) */
 .topbar .center{
 display:flex;
-gap:25px;
+gap:12px;
 font-weight:500;
+flex-wrap:wrap;        /* 👈 allow wrapping */
+justify-content:center;
+width:100%;            /* 👈 push to next row */
+margin-top:6px;
 }
 
 .topbar .center span{
@@ -205,6 +210,11 @@ cursor:pointer;
 padding:6px 12px;
 border-radius:6px;
 color:#374151;              /* 👈 ADD (visible dark gray) */
+}
+
+.topbar .center span{
+white-space:nowrap;   /* 👈 prevents breaking words */
+font-size:13px;
 }
 
 /* hover */
@@ -219,13 +229,6 @@ color:#1e3a8a;              /* 👈 ADD */
 background:#1e3a8a;
 color:white;
 font-weight:600;
-}
-
-/* RIGHT */
-.topbar .right{
-display:flex;
-align-items:center;
-gap:15px;
 }
 
 .notif{
@@ -281,6 +284,33 @@ margin-bottom:10px; /* space above keyboard */
 }
 }
 
+@media (max-width: 600px){
+
+.topbar{
+flex-direction:column;
+align-items:flex-start;
+}
+
+/* left (IMS) */
+.topbar .left{
+width:100%;
+}
+
+/* center tabs */
+.topbar .center{
+justify-content:flex-start;
+overflow-x:auto;          /* 👈 horizontal scroll */
+flex-wrap:nowrap;         /* 👈 single line scroll */
+padding-bottom:5px;
+}
+
+/* hide scrollbar (optional) */
+.topbar .center::-webkit-scrollbar{
+display:none;
+}
+
+}
+
 
 </style>
 
@@ -304,13 +334,7 @@ margin-bottom:10px; /* space above keyboard */
   <span onclick="openTab('sov')" id="tab_sov">Summary of Variance</span>
   <span onclick="openTab('system')" id="tab_system">System</span>
 </div>
-
-<!-- RIGHT -->
-<div class="right">
-  <span class="notif">🔔</span>
-  <span class="user">Welcome</span>
-</div>
-
+ 
 </header>
 
 <div class="container">
