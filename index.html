@@ -690,7 +690,11 @@ renderSOV()
 else if(id==="actual"){
 document.getElementById("masterContainer").style.display="block"
 document.getElementById("actualFilter").value="description"
-renderMaster() // FORCE refresh
+
+/* only render if empty (lazy load) */
+if(document.querySelector("#masterTable tbody").innerHTML === ""){
+renderMaster()
+}
 }
 
 else if(id==="system"){
@@ -707,8 +711,8 @@ document.getElementById("masterContainer").style.display="block"
 }
 
 // always refresh
-renderMaster()
-renderSold()
+// renderMaster()
+// renderSold()
 
 }
 
@@ -985,7 +989,7 @@ let receiving = receivingMap[i.barcode] || 0
 let theo = i.soh + receiving - i.sold
 let variance=i.actual-theo
 
-html+=`<tr class="${variance<0?'negative':''}">
+html+=`<tr data-barcode="${i.barcode}" class="${variance<0?'negative':''}">
 <td>${i.barcode}</td>
 <td>${i.description}</td>
 <td>${i.soh}</td>
@@ -2061,21 +2065,44 @@ XLSX.writeFile(wb, filename)
 function updateActual(barcode, value){
 
 let item = master[barcode]
-
 let val = Number(value)
 
-if(isNaN(val)){
-alert("Invalid number")
-return
-}
+if(isNaN(val)) return
 
 item.actual = val
 
 saveData()
-renderMaster()
+
+/* 🔥 update ONLY the row (no full render) */
+updateRow(barcode)
 
 }
 
+function updateRow(barcode){
+
+let row = document.querySelector(`tr[data-barcode='${barcode}']`)
+if(!row) return
+
+let item = master[barcode]
+
+let receiving = receivingMap[barcode] || 0
+let theo = item.soh + receiving - item.sold
+let variance = item.actual - theo
+
+/* update cells directly */
+row.children[6].innerHTML = `<input type="number" value="${item.actual}" style="width:60px"
+onchange="updateActual('${barcode}', this.value)">`
+
+row.children[7].innerText = variance
+
+/* highlight negative */
+if(variance < 0){
+row.classList.add("negative")
+}else{
+row.classList.remove("negative")
+}
+
+}
 
 </script>
 </body>
