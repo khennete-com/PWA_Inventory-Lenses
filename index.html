@@ -179,12 +179,14 @@ white-space: nowrap;
 .topbar{
 display:flex;
 align-items:center;
-justify-content:space-between;
+justify-content:space-between; /* 🔥 KEY FIX */
+gap:16px;
 background:#f8fafc;
 padding:10px 12px;
 border-bottom:1px solid #ddd;
 font-size:14px;
-flex-wrap:wrap; /* 👈 IMPORTANT */
+flex-wrap:nowrap;
+overflow-x:auto;
 }
 
 /* LEFT */
@@ -194,15 +196,12 @@ font-size:18px;
 color:#1e3a8a;
 }
 
-/* CENTER (tabs) */
 .topbar .center{
 display:flex;
 gap:12px;
 font-weight:500;
-flex-wrap:wrap;        /* 👈 allow wrapping */
-justify-content:center;
-width:100%;            /* 👈 push to next row */
-margin-top:6px;
+flex-wrap:nowrap;     /* ✅ no wrapping */
+justify-content:flex-start;
 }
 
 .topbar .center span{
@@ -286,14 +285,21 @@ margin-bottom:10px; /* space above keyboard */
 
 @media (max-width: 600px){
 
-.topbar{
-flex-direction:column;
-align-items:flex-start;
+.topbar .center{
+overflow-x:auto;
+flex-wrap:nowrap;
+padding-bottom:5px;
+}
+
+.topbar .center::-webkit-scrollbar{
+display:none;
+}
+
 }
 
 /* left (IMS) */
 .topbar .left{
-width:100%;
+width:auto;   /* or just DELETE the whole block */
 }
 
 /* center tabs */
@@ -311,6 +317,42 @@ display:none;
 
 }
 
+.summary-card{
+flex:1 !important;
+width:auto !important;
+max-width:none !important;
+}
+
+.summary-card{
+display:block !important;
+flex:1 !important;
+width:auto !important;
+max-width:none !important;
+}
+
+.summary-card{
+background:#ffffff;
+border-radius:10px;
+padding:14px;
+box-shadow:0 2px 6px rgba(0,0,0,0.08);
+text-align:center;
+}
+
+.summary-card .label{
+font-size:12px;
+color:#6b7280;
+margin-bottom:6px;
+}
+
+.summary-card .value{
+font-size:20px;
+font-weight:bold;
+color:#1e3a8a;
+}
+
+.summary-card{
+margin-bottom:12px;   /* 🔥 spacing between boxes */
+}
 
 </style>
 
@@ -331,7 +373,6 @@ display:none;
   <span onclick="openTab('sold')" id="tab_sold">Product Sold</span>
   <span onclick="openTab('receiving')" id="tab_receiving">Stock Transfers</span>
   <span onclick="openTab('actual')" id="tab_actual">Inventory</span>
-  <span onclick="openTab('sov')" id="tab_sov">Summary of Variance</span>
   <span onclick="openTab('system')" id="tab_system">System</span>
 </div>
  
@@ -343,20 +384,24 @@ display:none;
 
 <h3>Inventory Summary</h3>
 
-<table>
-<tr>
-<th>Stock on Hand</th>
-<th>Sold Items</th>
-<th>Actual on Hand</th>
-<th>Variance</th>
-</tr>
-<tr>
-<td id="sumSOH">0</td>
-<td id="sumSold">0</td>
-<td id="sumActual">0</td>
-<td id="sumVariance">0</td>
-</tr>
-</table>
+<div class="summary-boxes">
+
+<div class="summary-card">
+<div class="label">Total Stock On Hand</div>
+<div class="value" id="sumSOH">0</div>
+</div>
+
+<div class="summary-card">
+<div class="label">Total Sold</div>
+<div class="value" id="sumSold">0</div>
+</div>
+
+<div class="summary-card">
+<div class="label">Total Receiving</div>
+<div class="value" id="sumReceiving">0</div>
+</div>
+
+</div>
 
 <br>
 
@@ -393,7 +438,7 @@ onclick="clearSold()">Clear All Sold</button>
 
 <div id="actual" class="panel hidden">
 
-<h3>Actual Count</h3>
+<h3>Actions</h3>
 
 <select id="actualFilter">
 <option value="barcode">Barcode</option>
@@ -401,7 +446,6 @@ onclick="clearSold()">Clear All Sold</button>
 </select>
 
 <input id="actualSearch" placeholder="Search (supports % wildcard)" onkeyup="debounceRender()">
-<button class="action" onclick="toggleCompact()">📱 Compact View</button>
 <button class="action" onclick="downloadManualInventory()">
 ⬇ Download xls
 </button>
@@ -441,52 +485,6 @@ onclick="clearSold()">Clear All Sold</button>
 </table>
 
 </div>
-</div>
-
-<!-- NEW SOV TAB -->
-
-<div id="sov" class="panel hidden">
-
-<h3>Summary of Variance</h3>
-
-<div class="panel">
-
-<input id="sovSearch" 
-placeholder="Search Barcode or Description"
-onkeyup="renderSOV()"
-style="width:100%;padding:8px">
-
-<br><br>
-
-<button class="action" onclick="downSOV()">Download Report to Excel</button>
-
-</div>
-
-<div class="panel">
-
-<div style="overflow-x:auto;">
-<table id="sovTable">
-
-<thead>
-<tr>
-<th>Barcode</th>
-<th>Description</th>
-<th>SOH</th>
-<th>Sold</th>
-<th>Receiving</th>
-<th>Theo SOH</th>
-<th>Actual</th>
-<th>Variance</th>
-</tr>
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-</div>
-</div>
-
 </div>
 
 <div id="system" class="panel hidden">
@@ -545,7 +543,7 @@ onclick="clearAll()">Delete All Data</button>
 
 <div id="masterContainer" class="panel">
 
-<h3>Master Inventory</h3>
+<h3>Inventory Table</h3>
 
 <div style="overflow-x:auto;">
 <table id="masterTable">
@@ -558,9 +556,6 @@ onclick="clearAll()">Delete All Data</button>
 <th>Sold</th>
 <th>Receiving</th> <!-- ADD THIS -->
 <th>Theo SOH</th>
-<th>Actual</th>
-<th>Variance</th>
-<th>Actions</th>
 </tr>
 </thead>
 
@@ -645,7 +640,7 @@ masterList = Object.values(master)
 function openTab(id){
 
 // hide all main panels
-["up","sold","receiving","actual","sov","system"].forEach(p=>{
+["up","sold","receiving","actual","system"].forEach(p=>{
 document.getElementById(p).classList.add("hidden")
 })
 
@@ -676,25 +671,12 @@ else if(id==="receiving"){
 renderReceiving()
 }
 
-else if(id==="sov"){
-
-document.getElementById("masterContainer").style.display="none"
-document.getElementById("soldContainer").style.display="none"
-
-document.getElementById("sov").classList.remove("hidden")
-
-renderSOV()
-
-}
 
 else if(id==="actual"){
 document.getElementById("masterContainer").style.display="block"
 document.getElementById("actualFilter").value="description"
-
-/* only render if empty (lazy load) */
-if(document.querySelector("#masterTable tbody").innerHTML === ""){
 renderMaster()
-}
+
 }
 
 else if(id==="system"){
@@ -709,10 +691,6 @@ document.getElementById("notFoundPanel").classList.add("hidden")
 else{
 document.getElementById("masterContainer").style.display="block"
 }
-
-// always refresh
-// renderMaster()
-// renderSold()
 
 }
 
@@ -901,51 +879,6 @@ reader.readAsArrayBuffer(file)
 
 }
 
-function addActual(barcode){
-
-let item=master[barcode]
-
-if(!confirm("Product: "+item.description+"\n\nAdd 1 to Actual Count?")) return
-
-item.actual++
-
-saveData()
-
-renderMaster()
-
-}
-
-function lessActual(barcode){
-
-let item=master[barcode]
-
-if(!confirm("Product: "+item.description+"\n\nDecrease Actual Count by 1?")) return
-
-item.actual--
-
-saveData()
-
-renderMaster()
-
-}
-
-function exactActual(barcode){
-
-let item=master[barcode]
-
-let receiving = getReceivingTotal(item.barcode)
-let theo = item.soh + receiving - item.sold
-
-if(!confirm("Product: "+item.description+"\n\nSet Actual = Theo SOH ("+theo+") ?")) return
-
-item.actual=theo
-
-saveData()
-
-renderMaster()
-
-}
-
 function renderMaster(){
 
 let filter=document.getElementById("actualFilter")?.value
@@ -979,7 +912,7 @@ let html=""
 
 if(rows.length===0){
 
-html="<tr><td colspan='9'>No data</td></tr>"
+html="<tr><td colspan='6'>No data</td></tr>"
 
 }else{
 
@@ -987,27 +920,16 @@ rows.forEach(i=>{
 
 let receiving = receivingMap[i.barcode] || 0
 let theo = i.soh + receiving - i.sold
-let variance=i.actual-theo
 
-html+=`<tr data-barcode="${i.barcode}" class="${variance<0?'negative':''}">
+html+=`<tr>
+
 <td>${i.barcode}</td>
 <td>${i.description}</td>
 <td>${i.soh}</td>
 <td>${i.sold}</td>
 <td>${receiving}</td>
 <td>${theo}</td>
-<td>
-<input type="number" value="${i.actual}" 
-style="width:60px"
-onchange="updateActual('${i.barcode}', this.value)">
-</td>
-<td>${variance}</td>
-<td class="actionCell">
-<button class="btnAdd" onclick="addActual('${i.barcode}')">➕</button>
-<button class="btnLess" onclick="lessActual('${i.barcode}')">➖</button>
-<button class="btnExact" onclick="exactActual('${i.barcode}')">✔</button>
 
-</td>
 </tr>`
 
 })
@@ -1017,6 +939,7 @@ onchange="updateActual('${i.barcode}', this.value)">
 document.querySelector("#masterTable tbody").innerHTML=html
 
 }
+
 
 function renderSold(){
 
@@ -1045,150 +968,17 @@ function renderSummary(){
 
 let totalSOH=0
 let totalSold=0
-let totalActual=0
 let totalReceiving=0
 
 masterList.forEach(i=>{
 totalSOH+=Number(i.soh)||0
 totalSold+=Number(i.sold)||0
-totalActual+=Number(i.actual)||0
 totalReceiving += getReceivingTotal(i.barcode)
 })
 
-let theo = totalSOH + totalReceiving - totalSold
-let variance = totalActual - theo
-
-document.getElementById("sumSOH").innerText=totalSOH
-document.getElementById("sumSold").innerText=totalSold
-document.getElementById("sumActual").innerText=totalActual
-document.getElementById("sumVariance").innerText=variance
-
-}
-
-function renderSOV(){
-  
-let search = document.getElementById("sovSearch")?.value.toLowerCase() || ""
-let rows=[]
-
-for(let i of masterList){
-
-// 🔍 FILTER (ADD THIS BLOCK ONLY)
-if(search){
-let matchBarcode = i.barcode.toLowerCase().includes(search)
-let matchDesc = i.description.toLowerCase().includes(search)
-
-if(!matchBarcode && !matchDesc) continue
-}
-
-let receiving = getReceivingTotal(i.barcode)
-let theo = i.soh + receiving - i.sold
-let variance=i.actual-theo
-
-if(variance!==0){
-
-rows.push({
-barcode:i.barcode,
-description:i.description,
-soh:i.soh,
-sold:i.sold,
-receiving: receiving, // ADD THIS
-theo:theo,
-actual:i.actual,
-variance:variance
-})
-
-}
-
-}
-
-let html=""
-
-if(rows.length===0){
-html="<tr><td colspan='8'>All items are balanced (no variance)</td></tr>"
-}else{
-
-rows.forEach(r=>{
-
-html+=`<tr class="${r.variance<0?'negative':''}">
-<td>${r.barcode}</td>
-<td>${r.description}</td>
-<td>${r.soh}</td>
-<td>${r.sold}</td>
-<td>${r.receiving}</td> <!-- ADD -->
-<td>${r.theo}</td>
-<td>${r.actual}</td>
-<td>${r.variance}</td>
-</tr>`
-
-})
-
-}
-
-document.querySelector("#sovTable tbody").innerHTML=html
-
-}
-
-function downSOV(){
-let search = document.getElementById("sovSearch")?.value.toLowerCase() || ""
-let rows=[]
-
-for(let i of masterList){
-
-// 🔍 FILTER (ADD THIS BLOCK ONLY)
-if(search){
-let matchBarcode = i.barcode.toLowerCase().includes(search)
-let matchDesc = i.description.toLowerCase().includes(search)
-
-if(!matchBarcode && !matchDesc) continue
-}
-
-let receiving = getReceivingTotal(i.barcode)
-let theo = i.soh + receiving - i.sold
-let variance=i.actual-theo
-
-if(variance!==0){
-
-rows.push({
-BARCODE:i.barcode,
-DESCRIPTION:i.description,
-SOH:i.soh,
-SOLD:i.sold,
-RECEIVING: receiving, // ADD
-THEO_SOH:theo,
-ACTUAL:i.actual,
-VARIANCE:variance
-})
-
-}
-
-}
-
-if(rows.length===0){
-alert("No variance to export")
-return
-}
-
-let ws=XLSX.utils.json_to_sheet(rows)
-
-let wb=XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(wb,ws,"SOV")
-
-let now=new Date()
-
-let y=now.getFullYear()
-let m=(now.getMonth()+1).toString().padStart(2,"0")
-let d=now.getDate().toString().padStart(2,"0")
-
-let h=now.getHours().toString().padStart(2,"0")
-let min=now.getMinutes().toString().padStart(2,"0")
-let s=now.getSeconds().toString().padStart(2,"0")
-
-let timestamp=`${y}${m}${d}_${h}${min}${s}`
-
-let fileName=`summary_of_variance_${timestamp}.xls`
-
-XLSX.writeFile(wb,fileName)
+document.getElementById("sumSOH").innerText = totalSOH
+document.getElementById("sumSold").innerText = totalSold
+document.getElementById("sumReceiving").innerText = totalReceiving
 
 }
 
@@ -1879,23 +1669,6 @@ input.click()
 
 let isCompact = false
 
-function toggleCompact(){
-
-let table = document.getElementById("masterTable")
-let btn = event.target
-
-isCompact = !isCompact
-
-if(isCompact){
-table.classList.add("compact")
-btn.innerText = "🖥 Normal View"
-}else{
-table.classList.remove("compact")
-btn.innerText = "📱 Compact View"
-}
-
-}
-
 let newWorker = null
 
 function checkUpdate(){
@@ -2059,48 +1832,6 @@ let filename = `manual_inventory_${y}${m}${d}_${h}${min}.xls`
 
 /* download */
 XLSX.writeFile(wb, filename)
-
-}
-
-function updateActual(barcode, value){
-
-let item = master[barcode]
-let val = Number(value)
-
-if(isNaN(val)) return
-
-item.actual = val
-
-saveData()
-
-/* 🔥 update ONLY the row (no full render) */
-updateRow(barcode)
-
-}
-
-function updateRow(barcode){
-
-let row = document.querySelector(`tr[data-barcode='${barcode}']`)
-if(!row) return
-
-let item = master[barcode]
-
-let receiving = receivingMap[barcode] || 0
-let theo = item.soh + receiving - item.sold
-let variance = item.actual - theo
-
-/* update cells directly */
-row.children[6].innerHTML = `<input type="number" value="${item.actual}" style="width:60px"
-onchange="updateActual('${barcode}', this.value)">`
-
-row.children[7].innerText = variance
-
-/* highlight negative */
-if(variance < 0){
-row.classList.add("negative")
-}else{
-row.classList.remove("negative")
-}
 
 }
 
